@@ -5,21 +5,18 @@ const bcrypt = require("bcrypt");
 const util = require("util");
 const connection = require("../controllers/database");
 
-const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRES = process.env.JWT_EXPIRES || '24h';
-
-// convert mysql callbacks to promises
+// Convert mysql callbacks to promises
 const query = util.promisify(connection.query).bind(connection);
 
-// Fallback values if environment variables are not set
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key-for-development';
+// Environment variables (no fallback to catch missing config)
+const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-here-make-it-long-and-random'; // Must be set in Render
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '24h';
 
-// role-to-path mapping (can move to DB or config file later)
+// Role-to-path mapping
 const roleRedirectMap = {
   R02: "/pages/adminDashboard.html",
   R03: "/pages/superAdminDashboard.html",
-  R01: "/pages/userDashboard.html", // default user role
+  R01: "/pages/userDashboard.html",
 };
 
 router.post("/", async (req, res) => {
@@ -27,6 +24,11 @@ router.post("/", async (req, res) => {
     const { identifier, password } = req.body;
     console.log("🔐 Login attempt for:", identifier);
     console.log("🔑 JWT_SECRET exists:", !!JWT_SECRET);
+
+    if (!JWT_SECRET) {
+      console.error("❌ JWT_SECRET is not set");
+      return res.status(500).json({ message: "Server configuration error: JWT_SECRET missing" });
+    }
 
     // Validate input
     if (!identifier || !password) {
@@ -49,43 +51,27 @@ router.post("/", async (req, res) => {
 
     if (results.length === 0) {
       console.log("❌ No user found with identifier:", identifier);
-      
-      // Debug: Show what users exist (remove this in production!)
-      const allUsers = await query("SELECT username, email FROM accounts LIMIT 5");
-      console.log("📋 Available usernames:", allUsers.map(u => u.username));
-      
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
     const user = results[0];
     console.log("👤 Found user:", user.username, "| Role:", user.role_id, "| Active:", user.active);
 
-    // ✅ Check if user is archived/inactive
     if (user.active === 0) {
       console.log("🚫 Login blocked: user is deactivated/archived ->", user.username);
       return res.status(403).json({ message: "Account deactivated. Contact administrator." });
     }
 
     console.log("🔐 Stored password hash:", user.password.substring(0, 20) + "...");
-
-    // Test password
     console.log("🧪 Testing password:", password);
     const isMatch = await bcrypt.compare(password, user.password);
     console.log("🎯 Password match:", isMatch ? "✅ YES" : "❌ NO");
-    
+
     if (!isMatch) {
       console.log("❌ Password mismatch for user:", user.username);
-      
-      // Debug: Test with a fresh hash (remove this in production!)
-      const testHash = await bcrypt.hash(password, 10);
-      console.log("🧪 Test hash for entered password:", testHash);
-      const testMatch = await bcrypt.compare(password, testHash);
-      console.log("🧪 Test hash matches:", testMatch);
-      
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    // Create JWT token
     console.log("🎫 Creating JWT token...");
     const tokenPayload = { 
       username: user.username, 
@@ -116,6 +102,7 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Test database connection
 router.get('/test-db', async (req, res) => {
   try {
     const results = await query('SELECT NOW()');
@@ -125,6 +112,5 @@ router.get('/test-db', async (req, res) => {
     res.status(500).json({ message: 'Database connection failed', error: err.message });
   }
 });
-
 
 module.exports = router;
