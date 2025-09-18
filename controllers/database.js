@@ -1,12 +1,12 @@
 const mysql = require('mysql');
 
 const connection = mysql.createConnection({
-  host: 'bjels9630atu3odm3he7-mysql.services.clever-cloud.com',
-  user: 'uau4eoezcd8vykqh',
-  password: 'xqnNZU6PdszSJkJ4xhRU',
-  database: 'bjels9630atu3odm3he7',
+  host: process.env.DB_HOST || 'bjels9630atu3odm3he7-mysql.services.clever-cloud.com',
+  user: process.env.DB_USER || 'uau4eoezcd8vykqh',
+  password: process.env.DB_PASSWORD || 'xqnNZU6PdszSJkJ4xhRU',
+  database: process.env.DB_NAME || 'bjels9630atu3odm3he7',
   ssl: {
-    rejectUnauthorized: false // Required for CleverCloud’s self-signed certificate
+    rejectUnauthorized: false // Required for CleverCloud
   }
 });
 
