@@ -1,10 +1,10 @@
 const mysql = require('mysql');
 
 const connection = mysql.createConnection({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'testing_db'
+  host: 'bjels9630atu3odm3he7-mysql.services.clever-cloud.com',
+  user: 'uau4eoezcd8vykqh',
+  password: 'xqnNZU6PdszSJkJ4xhRU',
+  database: 'bjels9630atu3odm3he7'
 });
 
 connection.connect((err) => {
@@ -14,5 +14,6 @@ connection.connect((err) => {
   }
   console.log("Connected to MySQL Database.");
 });
+
 
 module.exports = connection;
