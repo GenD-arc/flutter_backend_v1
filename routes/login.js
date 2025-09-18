@@ -5,6 +5,9 @@ const bcrypt = require("bcrypt");
 const util = require("util");
 const connection = require("../controllers/database");
 
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES = process.env.JWT_EXPIRES || '24h';
+
 // convert mysql callbacks to promises
 const query = util.promisify(connection.query).bind(connection);
 
@@ -112,5 +115,16 @@ router.post("/", async (req, res) => {
     });
   }
 });
+
+router.get('/test-db', async (req, res) => {
+  try {
+    const results = await query('SELECT NOW()');
+    res.status(200).json({ message: 'Database connected successfully', time: results[0]['NOW()'] });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ message: 'Database connection failed', error: err.message });
+  }
+});
+
 
 module.exports = router;
