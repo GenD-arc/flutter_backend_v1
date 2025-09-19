@@ -2,14 +2,10 @@ const express = require("express");
 const router = express.Router();
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
-const util = require("util");
-const connection = require("../controllers/database");
+const pool = require("../controllers/database"); // Now a pool
 
-// Convert mysql callbacks to promises
-const query = util.promisify(connection.query).bind(connection);
-
-// Environment variables (no fallback to catch missing config)
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-key-here-make-it-long-and-random'; // Must be set in Render
+// Environment variables
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '24h';
 
 // Role-to-path mapping
@@ -30,7 +26,6 @@ router.post("/", async (req, res) => {
       return res.status(500).json({ message: "Server configuration error: JWT_SECRET missing" });
     }
 
-    // Validate input
     if (!identifier || !password) {
       console.log("❌ Missing identifier or password");
       return res.status(400).json({ message: "Username and password are required" });
@@ -46,7 +41,7 @@ router.post("/", async (req, res) => {
     `;
 
     console.log("🔍 Searching for user with identifier:", identifier);
-    const results = await query(sql, [identifier, identifier]);
+    const [results] = await pool.promise().query(sql, [identifier, identifier]); // Use promise() for async/await
     console.log("📊 DB query returned", results.length, "results");
 
     if (results.length === 0) {
@@ -105,7 +100,7 @@ router.post("/", async (req, res) => {
 // Test database connection
 router.get('/test-db', async (req, res) => {
   try {
-    const results = await query('SELECT NOW()');
+    const [results] = await pool.promise().query('SELECT NOW()');
     res.status(200).json({ message: 'Database connected successfully', time: results[0]['NOW()'] });
   } catch (err) {
     console.error('Database error:', err);
